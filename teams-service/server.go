@@ -12,16 +12,20 @@ import (
 	"go.uber.org/zap"
 )
 
+type GinContextKey string
+
+const ginContextKey GinContextKey = "ginContext"
+
 // Defining the Graphql handler
-func graphqlHandler() gin.HandlerFunc {
+func graphqlHandler(logger *zap.Logger) gin.HandlerFunc {
 	h := handler.NewDefaultServer(
 		graph.NewExecutableSchema(graph.Config{
-			Resolvers: &graph.Resolver{},
+			Resolvers: &graph.Resolver{Logger: logger},
 		}),
 	)
 
 	return func(c *gin.Context) {
-		ctx := context.WithValue(c.Request.Context(), "ginContext", c)
+		ctx := context.WithValue(c.Request.Context(), ginContextKey, c)
 		h.ServeHTTP(c.Writer, c.Request.WithContext(ctx))
 	}
 }
@@ -40,20 +44,29 @@ func main() {
 		log.Fatalf("can't initialize zap logger: %v", err)
 	}
 
+	// Deferring the logger sync
 	defer logger.Sync()
+
+	// Logging a message
+	logger.Info("Logger initialized successfully")
 
 	db.InitialiseDBConnection()
 
 	// Setting up Gin
 	r := gin.Default()
-	r.POST("/my-team", graphqlHandler())
+
+	// Log a message to indicate that the server has started
+	logger.Info("Server started")
+
+	// Set up the GraphQL handler
+	r.POST("/my-team", graphqlHandler(logger))
+
+	// Set up the Playground handler
 	r.GET("/", playgroundHandler())
 
-	// Log a message when the server starts running
-	logger.Info("Server started running on port 8080")
-
+	// Start the server
 	if err := r.Run(":8080"); err != nil {
-		// Log an error message if the server fails to start
-		logger.Error("Failed to start server", zap.Error(err))
+		logger.Error("Server failed to start", zap.Error(err))
 	}
+	r.Run()
 }

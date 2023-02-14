@@ -10,6 +10,8 @@ import (
 	"fmt"
 	"teams/db"
 	"teams/graph/model"
+
+	"go.uber.org/zap"
 )
 
 // CreateTeamMember is the resolver for the createTeamMember field.
@@ -22,8 +24,11 @@ func (r *mutationResolver) CreateTeamMember(ctx context.Context, input model.New
 	).Scan(&teamMember.ID, &teamMember.Name, &teamMember.Role, &teamMember.City)
 
 	if err != nil {
+		r.Logger.Error("Error creating team member", zap.Error(err))
 		return nil, err
 	}
+
+	r.Logger.Info("Created a new team member", zap.Any("teamMember", teamMember))
 
 	return &teamMember, nil
 }
@@ -39,8 +44,11 @@ func (r *mutationResolver) UpdateTeamMember(ctx context.Context, input model.Upd
 	).StructScan(&teamMember)
 
 	if err != nil {
+		r.Logger.Error("Error updating team member", zap.Error(err))
 		return nil, err
 	}
+
+	r.Logger.Info("Updated team member", zap.Any("teamMember", teamMember))
 
 	return &teamMember, nil
 }
@@ -50,17 +58,22 @@ func (r *mutationResolver) RemoveTeamMember(ctx context.Context, input model.Del
 	var teamMember model.TeamMember
 	err := db.DBClient.QueryRow("DELETE FROM team_members WHERE id=$1 RETURNING id, name, role, city", input.TeamMemberID).Scan(&teamMember.ID, &teamMember.Name, &teamMember.Role, &teamMember.City)
 	if err != nil {
+		r.Logger.Error("Error deleting team member", zap.Error(err))
 		return nil, err
 	}
 
+	r.Logger.Info("Deleted team member", zap.Any("teamMember", teamMember))
+
 	return &teamMember, nil
 }
+
 
 // TeamMembers is the resolver for the teamMembers field.
 func (r *queryResolver) TeamMembers(ctx context.Context) ([]*model.TeamMember, error) {
 	teamMembers := make([]*model.TeamMember, 0)
 	rows, err := db.DBClient.Query("SELECT id, name, role, city FROM team_members")
 	if err != nil {
+		r.Logger.Error("Failed to get team members", zap.Error(err))
 		return nil, err
 	}
 	defer rows.Close()
@@ -68,14 +81,17 @@ func (r *queryResolver) TeamMembers(ctx context.Context) ([]*model.TeamMember, e
 	for rows.Next() {
 		var teamMember model.TeamMember
 		if err := rows.Scan(&teamMember.ID, &teamMember.Name, &teamMember.Role, &teamMember.City); err != nil {
+			r.Logger.Error("Failed to scan row", zap.Error(err))
 			return nil, err
 		}
 		teamMembers = append(teamMembers, &teamMember)
 	}
 	if err := rows.Err(); err != nil {
+		r.Logger.Error("Failed to get row error", zap.Error(err))
 		return nil, err
 	}
 
+	r.Logger.Info("generated list of team members")
 	return teamMembers, nil
 }
 
@@ -87,11 +103,14 @@ func (r *queryResolver) TeamMember(ctx context.Context, id string) (*model.TeamM
 
 	if err != nil {
 		if err == sql.ErrNoRows {
+			r.Logger.Error("Team member not found", zap.Error(err))
 			return nil, fmt.Errorf("team member not found")
 		}
+		r.Logger.Error("Failed to get team member", zap.Error(err))
 		return nil, err
 	}
 
+	r.Logger.Info("found team member with the given id")
 	return &teamMember, nil
 }
 
