@@ -1,0 +1,34 @@
+type TeamMember {
+  id: ID!
+  name: String!
+  role: String!
+  city: String!
+}
+
+input NewTeamMember {
+  name: String!
+  role: String!
+  city: String!
+}
+
+input DeleteTeamMember {
+  teamMemberId: String!
+}
+
+input UpdateTeamMember {
+  id: ID!
+  name: String
+  role: String
+  city: String
+}
+
+type Query {
+  teamMembers: [TeamMember!]!
+  teamMember(id: String!): TeamMember
+}
+
+type Mutation {
+  createTeamMember(input: NewTeamMember!): TeamMember!
+  updateTeamMember(input: UpdateTeamMember!): TeamMember!
+  removeTeamMember(input: DeleteTeamMember!): TeamMember!
+}
