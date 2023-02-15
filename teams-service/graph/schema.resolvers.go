@@ -17,8 +17,16 @@ import (
 
 // CreateTeamMember is the resolver for the createTeamMember field.
 func (r *mutationResolver) CreateTeamMember(ctx context.Context, input model.NewTeamMember) (*model.TeamMember, error) {
+	// Auth-service:
+	token, err := helpers.Authenticate(r.Logger)
+	if err != nil {
+		r.Logger.Error("failed to authenticate", zap.Error(err))
+		return nil, err
+	}
+	r.Logger.Info("Successful auth", zap.Any("token", token))
+
 	var teamMember model.TeamMember
-	err := db.DBClient.QueryRow("INSERT INTO team_members (name, role, city) VALUES ($1, $2, $3) RETURNING id, name, role, city",
+	err = db.DBClient.QueryRow("INSERT INTO team_members (name, role, city) VALUES ($1, $2, $3) RETURNING id, name, role, city",
 		input.Name,
 		input.Role,
 		input.City,
