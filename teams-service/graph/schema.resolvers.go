@@ -9,6 +9,7 @@ import (
 	"database/sql"
 	"fmt"
 	"teams/db"
+	"teams/graph/helpers"
 	"teams/graph/model"
 
 	"go.uber.org/zap"
@@ -55,8 +56,16 @@ func (r *mutationResolver) UpdateTeamMember(ctx context.Context, input model.Upd
 
 // RemoveTeamMember is the resolver for the removeTeamMember field.
 func (r *mutationResolver) RemoveTeamMember(ctx context.Context, input model.DeleteTeamMember) (*model.TeamMember, error) {
+	// Auth-service:
+	token, err := helpers.Authenticate(r.Logger)
+	if err != nil {
+		r.Logger.Error("failed to authenticate", zap.Error(err))
+		return nil, err
+	}
+	r.Logger.Info("Successful auth", zap.Any("token", token))
+
 	var teamMember model.TeamMember
-	err := db.DBClient.QueryRow("DELETE FROM team_members WHERE id=$1 RETURNING id, name, role, city", input.TeamMemberID).Scan(&teamMember.ID, &teamMember.Name, &teamMember.Role, &teamMember.City)
+	err = db.DBClient.QueryRow("DELETE FROM team_members WHERE id=$1 RETURNING id, name, role, city", input.TeamMemberID).Scan(&teamMember.ID, &teamMember.Name, &teamMember.Role, &teamMember.City)
 	if err != nil {
 		r.Logger.Error("Error deleting team member", zap.Error(err))
 		return nil, err

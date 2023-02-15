@@ -1,4 +1,4 @@
-package util
+package helpers
 
 import (
 	"github.com/spf13/viper"
@@ -9,6 +9,10 @@ import (
 type Config struct {
 	DBDriver             string        `mapstructure:"DB_DRIVER"`
 	DBSource             string        `mapstructure:"DB_SOURCE"`
+	AuthService          string        `mapstructure:"AUTH_SERVICE_URL"`
+	Login             	 string        `mapstructure:"AUTH_LOGIN"`
+	AuthUsername         string        `mapstructure:"AUTH_USERNAME"`
+	AuthPassword         string        `mapstructure:"AUTH_PASSWORD"`
 }
 
 // LoadConfig reads configuration from file or environment variables.
