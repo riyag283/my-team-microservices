@@ -3,7 +3,6 @@ package db
 import (
 	"database/sql"
 	"errors"
-	"os"
 	"testing"
 
 	"github.com/jmoiron/sqlx"
@@ -56,13 +55,14 @@ func (m *MockDBClientInterface) Query(query string, args ...interface{}) (*sql.R
 }
 
 func TestInitialiseDBConnection(t *testing.T) {
-    os.Setenv("APP_ENV", "test")
-
     // Create a mock DBClientInterface instance
     mockDBClient := new(MockDBClientInterface)
 
     // Define the expected behavior of the Ping() method
     mockDBClient.On("Ping").Return(nil)
+
+    // Define the expected behavior of the Close() method
+    mockDBClient.On("Close").Return(nil)
 
     // Define the expected behavior of the Query() method
     mockDBClient.On("Query", mock.Anything, mock.Anything).Return(nil, errors.New("mock error"))
@@ -74,7 +74,10 @@ func TestInitialiseDBConnection(t *testing.T) {
     InitialiseDBConnection()
 
     // Assert that Ping() was called on the mock DBClientInterface instance
-    mockDBClient.AssertNotCalled(t, "Ping")
+    mockDBClient.AssertCalled(t, "Ping")
+
+    // Assert that Close() was called on the mock DBClientInterface instance
+    mockDBClient.AssertCalled(t, "Close")
 
     // Assert that Query() was not called on the mock DBClientInterface instance
     mockDBClient.AssertNotCalled(t, "Query")

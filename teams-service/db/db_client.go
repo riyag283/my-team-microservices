@@ -3,7 +3,6 @@ package db
 import (
 	"database/sql"
 	"log"
-	"os"
 	util "teams/utils"
 
 	"github.com/jmoiron/sqlx"
@@ -42,15 +41,7 @@ var (
 )
 
 func InitialiseDBConnection() {
-    var config util.Config
-    var err error
-
-    if os.Getenv("APP_ENV") == "test" {
-		config, err = util.LoadMockConfig()
-	} else {
-		config, err = util.LoadConfig(".")
-	}
-
+    config, err := util.LoadConfig(".")
     if err != nil {
         log.Fatal("cannot load configurations:", err)
     }
