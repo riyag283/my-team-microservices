@@ -31,3 +31,12 @@ func LoadConfig(path string) (config Config, err error) {
 	err = viper.Unmarshal(&config)
 	return
 }
+
+// LoadMockConfig returns a mock configuration for testing purposes.
+func LoadMockConfig() (config Config, err error) {
+	config = Config{
+		DBDriver:             "postgres",
+		DBSource:             "postgres://postgres:password@localhost:5434/team?sslmode=disable",
+	}
+	return
+}
