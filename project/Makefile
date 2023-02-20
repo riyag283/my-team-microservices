@@ -59,6 +59,9 @@ teams_migrateup:
 teams_migratedown:
 	migrate -path ./../teams-service/db/migration -database "postgres://postgres:password@localhost:5434/team?sslmode=disable" -verbose down
 
+# mock_teams:
+# 	mockgen -destination=db/mocks/db_client.go teams/db DBClientInterface
+
 # auth_server:
 # 	go run ./../authentication-service/cmd/api/main.go
 

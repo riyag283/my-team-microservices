@@ -26,7 +26,7 @@ func (r *mutationResolver) CreateTeamMember(ctx context.Context, input model.New
 	r.Logger.Info("Successful auth", zap.Any("token", token))
 
 	var teamMember model.TeamMember
-	err = db.DBClient.QueryRow("INSERT INTO team_members (name, role, city) VALUES ($1, $2, $3) RETURNING id, name, role, city",
+	err = db.DBClientInstance.QueryRow("INSERT INTO team_members (name, role, city) VALUES ($1, $2, $3) RETURNING id, name, role, city",
 		input.Name,
 		input.Role,
 		input.City,
@@ -45,7 +45,7 @@ func (r *mutationResolver) CreateTeamMember(ctx context.Context, input model.New
 // UpdateTeamMember is the resolver for the updateTeamMember field.
 func (r *mutationResolver) UpdateTeamMember(ctx context.Context, input model.UpdateTeamMember) (*model.TeamMember, error) {
 	var teamMember model.TeamMember
-	err := db.DBClient.QueryRowx("UPDATE team_members SET name=$2, role=$3, city=$4 WHERE id=$1 RETURNING id, name, role, city",
+	err := db.DBClientInstance.QueryRowx("UPDATE team_members SET name=$2, role=$3, city=$4 WHERE id=$1 RETURNING id, name, role, city",
 		input.ID,
 		input.Name,
 		input.Role,
@@ -65,15 +65,15 @@ func (r *mutationResolver) UpdateTeamMember(ctx context.Context, input model.Upd
 // RemoveTeamMember is the resolver for the removeTeamMember field.
 func (r *mutationResolver) RemoveTeamMember(ctx context.Context, input model.DeleteTeamMember) (*model.TeamMember, error) {
 	// Auth-service:
-	token, err := helpers.Authenticate(r.Logger)
+	_, err := helpers.Authenticate(r.Logger)
 	if err != nil {
 		r.Logger.Error("failed to authenticate", zap.Error(err))
 		return nil, err
 	}
-	r.Logger.Info("Successful auth", zap.Any("token", token))
+	r.Logger.Info("Successful auth, token generated")
 
 	var teamMember model.TeamMember
-	err = db.DBClient.QueryRow("DELETE FROM team_members WHERE id=$1 RETURNING id, name, role, city", input.TeamMemberID).Scan(&teamMember.ID, &teamMember.Name, &teamMember.Role, &teamMember.City)
+	err = db.DBClientInstance.QueryRow("DELETE FROM team_members WHERE id=$1 RETURNING id, name, role, city", input.TeamMemberID).Scan(&teamMember.ID, &teamMember.Name, &teamMember.Role, &teamMember.City)
 	if err != nil {
 		r.Logger.Error("Error deleting team member", zap.Error(err))
 		return nil, err
@@ -84,11 +84,10 @@ func (r *mutationResolver) RemoveTeamMember(ctx context.Context, input model.Del
 	return &teamMember, nil
 }
 
-
 // TeamMembers is the resolver for the teamMembers field.
 func (r *queryResolver) TeamMembers(ctx context.Context) ([]*model.TeamMember, error) {
 	teamMembers := make([]*model.TeamMember, 0)
-	rows, err := db.DBClient.Query("SELECT id, name, role, city FROM team_members")
+	rows, err := db.DBClientInstance.Query("SELECT id, name, role, city FROM team_members")
 	if err != nil {
 		r.Logger.Error("Failed to get team members", zap.Error(err))
 		return nil, err
@@ -116,7 +115,7 @@ func (r *queryResolver) TeamMembers(ctx context.Context) ([]*model.TeamMember, e
 func (r *queryResolver) TeamMember(ctx context.Context, id string) (*model.TeamMember, error) {
 	var teamMember model.TeamMember
 
-	err := db.DBClient.QueryRow("SELECT id, name, role, city FROM team_members WHERE id = $1", id).Scan(&teamMember.ID, &teamMember.Name, &teamMember.Role, &teamMember.City)
+	err := db.DBClientInstance.QueryRow("SELECT id, name, role, city FROM team_members WHERE id = $1", id).Scan(&teamMember.ID, &teamMember.Name, &teamMember.Role, &teamMember.City)
 
 	if err != nil {
 		if err == sql.ErrNoRows {
