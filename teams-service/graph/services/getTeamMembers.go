@@ -8,7 +8,7 @@ import (
 // GetTeamMembersService retrieves all team members from the database
 func GetTeamMembersService() ([]*model.TeamMember, error) {
 	teamMembers := make([]*model.TeamMember, 0)
-	rows, err := db.DBClient.Query("SELECT id, name, role, city FROM team_members")
+	rows, err := db.DBClientInstance.Query("SELECT id, name, role, city FROM team_members")
 	if err != nil {
 		return nil, err
 	}
