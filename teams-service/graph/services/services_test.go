@@ -63,6 +63,104 @@ func TestGetTeamMembersService(t *testing.T) {
     assert.NoError(t, mock.ExpectationsWereMet())
 }
 
+func TestGetTeamMembersService_InvalidQuery(t *testing.T) {
+	// Create a new mock database and defer its closure
+	db, mock, err := sqlmock.New()
+	assert.NoError(t, err)
+	defer db.Close()
+
+	// Expect a query to be made to the database and return an error
+	mock.ExpectQuery("SELECT (.+) FROM team_members").WillReturnError(fmt.Errorf("invalid query"))
+
+	// Create an *sqlx.DB instance using the mock database
+	sqlxDB := sqlx.NewDb(db, "sqlmock")
+
+	// Call the function being tested
+	teamMembers, err := GetTeamMembersService(sqlxDB)
+
+	// Verify that the function returns an error
+	assert.Error(t, err)
+	assert.Nil(t, teamMembers)
+
+	// Verify that all expected queries were made
+	assert.NoError(t, mock.ExpectationsWereMet())
+}
+
+func TestGetTeamMembersService_NoTeamMembers(t *testing.T) {
+	// Create a new mock database and defer its closure
+	db, mock, err := sqlmock.New()
+	assert.NoError(t, err)
+	defer db.Close()
+
+	// Define the columns that will be returned by the mock rows
+	columns := []string{"ID", "Name", "Role", "City"}
+
+	// Expect a query to be made to the database and return an empty result set
+	mock.ExpectQuery("SELECT (.+) FROM team_members").WillReturnRows(sqlmock.NewRows(columns))
+
+	// Create an *sqlx.DB instance using the mock database
+	sqlxDB := sqlx.NewDb(db, "sqlmock")
+
+	// Call the function being tested
+	teamMembers, err := GetTeamMembersService(sqlxDB)
+
+	// Verify that the function returns an empty array
+	assert.NoError(t, err)
+	assert.Empty(t, teamMembers)
+
+	// Verify that all expected queries were made
+	assert.NoError(t, mock.ExpectationsWereMet())
+}
+
+func TestGetTeamMembersService_ConnError(t *testing.T) {
+	// Create a new mock database and defer its closure
+	db, mock, err := sqlmock.New()
+	assert.NoError(t, err)
+	db.Close() // Close the database connection to simulate a connection error
+
+	// Create an *sqlx.DB instance using the mock database
+	sqlxDB := sqlx.NewDb(db, "sqlmock")
+
+	// Call the function being tested
+	teamMembers, err := GetTeamMembersService(sqlxDB)
+
+	// Verify that the function returns an error
+	assert.Error(t, err)
+	assert.Nil(t, teamMembers)
+
+	// Verify that all expected queries were made
+	assert.NoError(t, mock.ExpectationsWereMet())
+}
+
+func TestGetTeamMembersService_MissingColumn(t *testing.T) {
+    // Create a new mock database and defer its closure
+    db, mock, err := sqlmock.New()
+    assert.NoError(t, err)
+    defer db.Close()
+
+    // Define the columns that will be returned by the mock rows, but exclude the "Name" column
+    columns := []string{"ID", "Role", "City"}
+
+    // Define the rows that will be returned by the mock database
+    rows := sqlmock.NewRows(columns).
+        AddRow("1", "Developer", "Ranchi").
+        AddRow("2", "Manager", "New York")
+
+    // Expect a query to be made to the database and return the mock rows
+    mock.ExpectQuery("SELECT (.+) FROM team_members").WillReturnRows(rows)
+
+    // Create an *sqlx.DB instance using the mock database
+    sqlxDB := sqlx.NewDb(db, "sqlmock")
+
+    // Call the function being tested
+    teamMembers, err := GetTeamMembersService(sqlxDB)
+    assert.Error(t, err)
+    assert.Nil(t, teamMembers)
+
+    // Verify that all expected queries were made
+    assert.NoError(t, mock.ExpectationsWereMet())
+}
+
 func TestGetTeamMemberServiceFound(t *testing.T) {
     // Create a new mock database and defer its closure
     db, mock, err := sqlmock.New()
@@ -81,7 +179,6 @@ func TestGetTeamMemberServiceFound(t *testing.T) {
 		WithArgs("1").
 		WillReturnRows(rows)
 
-
     // Create an *sqlx.DB instance using the mock database
     sqlxDB := sqlx.NewDb(db, "sqlmock")
 
@@ -97,6 +194,56 @@ func TestGetTeamMemberServiceFound(t *testing.T) {
         City: "Ranchi",
     }
     assert.Equal(t, expectedTeamMember, teamMember)
+
+    // Verify that all expected queries were made
+    assert.NoError(t, mock.ExpectationsWereMet())
+}
+
+func TestGetTeamMemberService_TeamMemberNotFound(t *testing.T) {
+    // Create a new mock database and defer its closure
+    db, mock, err := sqlmock.New()
+    assert.NoError(t, err)
+    defer db.Close()
+
+    // Define the columns that will be returned by the mock rows
+    columns := []string{"id", "name", "role", "city"}
+
+    // Define the row that will be returned by the mock database
+    rows := sqlmock.NewRows(columns)
+
+    // Expect a query to be made to the database and return the mock rows
+	mock.ExpectQuery("SELECT\\s+id,\\s+name,\\s+role,\\s+city\\s+FROM\\s+team_members\\s+WHERE\\s+id\\s+=\\s+\\$1").
+		WithArgs("1").
+		WillReturnRows(rows)
+
+    // Create an *sqlx.DB instance using the mock database
+    sqlxDB := sqlx.NewDb(db, "sqlmock")
+
+    // Call the function being tested
+    _, err = GetTeamMemberService(sqlxDB, "1")
+    assert.EqualError(t, err, "team member not found")
+
+    // Verify that all expected queries were made
+    assert.NoError(t, mock.ExpectationsWereMet())
+}
+
+func TestGetTeamMemberService_DatabaseError(t *testing.T) {
+    // Create a new mock database and defer its closure
+    db, mock, err := sqlmock.New()
+    assert.NoError(t, err)
+    defer db.Close()
+
+    // Expect a query to be made to the database and return the mock rows
+	mock.ExpectQuery("SELECT\\s+id,\\s+name,\\s+role,\\s+city\\s+FROM\\s+team_members\\s+WHERE\\s+id\\s+=\\s+\\$1").
+		WithArgs("1").
+		WillReturnError(fmt.Errorf("database error"))
+
+    // Create an *sqlx.DB instance using the mock database
+    sqlxDB := sqlx.NewDb(db, "sqlmock")
+
+    // Call the function being tested
+    _, err = GetTeamMemberService(sqlxDB, "1")
+    assert.EqualError(t, err, "database error")
 
     // Verify that all expected queries were made
     assert.NoError(t, mock.ExpectationsWereMet())
@@ -293,6 +440,44 @@ func TestUpdateTeamMemberService(t *testing.T) {
     // Verify that the correct data was returned
     assert.Equal(t, expectedTeamMember, &teamMember)
 
+    // Verify that all expected queries were made
+    assert.NoError(t, mock.ExpectationsWereMet())
+}
+
+func TestUpdateTeamMemberService_DatabaseError(t *testing.T) {
+    // Create a new mock database and defer its closure
+    db, mock, err := sqlmock.New()
+    assert.NoError(t, err)
+    defer db.Close()
+
+    // Expect an update query to be made to the database and return the mock row
+    mock.ExpectQuery("UPDATE team_members SET name=\\$2, role=\\$3, city=\\$4 WHERE id=\\$1 RETURNING id, name, role, city").
+        WithArgs("1", "Updated Name", "Updated Role", "Updated City").
+		WillReturnError(fmt.Errorf("database error"))
+
+    // Create an *sqlx.DB instance using the mock database
+    sqlxDB := sqlx.NewDb(db, "sqlmock")
+
+    expectedTeamMember := &model.TeamMember{
+        ID:   "",
+        Name: "",
+        Role: "",
+        City: "",
+    }
+
+    // Call the function being tested
+    requestBody := model.UpdateTeamMember{
+        ID:   "1",
+        Name: pointerToString("Updated Name"),
+        Role: pointerToString("Updated Role"),
+        City: pointerToString("Updated City"),
+    }
+    teamMember, err := UpdateTeamMemberService(sqlxDB, requestBody)
+    assert.EqualError(t, err, "database error")
+
+    // Verify that the correct data was returned
+    assert.Equal(t, expectedTeamMember, &teamMember)
+    
     // Verify that all expected queries were made
     assert.NoError(t, mock.ExpectationsWereMet())
 }
