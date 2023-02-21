@@ -2,6 +2,7 @@ package services
 
 import (
 	"database/sql"
+	"errors"
 	"fmt"
 	"teams/graph/model"
 	"testing"
@@ -158,6 +159,37 @@ func TestGetTeamMembersService_MissingColumn(t *testing.T) {
     assert.Nil(t, teamMembers)
 
     // Verify that all expected queries were made
+    assert.NoError(t, mock.ExpectationsWereMet())
+}
+
+func TestGetTeamMembersService_ErrorOnRows(t *testing.T) {
+    db, mock, err := sqlmock.New()
+    assert.NoError(t, err)
+    defer db.Close()
+
+    columns := []string{"ID", "Name", "Role", "City"}
+
+    rows := sqlmock.NewRows(columns).
+        AddRow("1", "Riya Gupta", "Developer", "Ranchi").
+        AddRow("2", "John Doe", "Manager", "New York")
+
+    mock.ExpectQuery("SELECT (.+) FROM team_members").WillReturnRows(rows)
+
+    sqlxDB := sqlx.NewDb(db, "sqlmock")
+
+    // Create a mock error and set it to be returned by rows.Err()
+    mockError := errors.New("an error occurred while fetching rows")
+    rows.RowError(1, mockError)
+
+    teamMembers, err := GetTeamMembersService(sqlxDB)
+
+    // Check that the function returns the expected error
+    assert.Error(t, err)
+    assert.Equal(t, mockError, err)
+
+    // Check that the returned teamMembers is nil
+    assert.Nil(t, teamMembers)
+
     assert.NoError(t, mock.ExpectationsWereMet())
 }
 
