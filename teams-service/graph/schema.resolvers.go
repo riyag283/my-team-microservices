@@ -6,11 +6,9 @@ package graph
 
 import (
 	"context"
-	"database/sql"
-	"fmt"
-	"teams/db"
 	"teams/graph/helpers"
 	"teams/graph/model"
+	"teams/graph/services"
 
 	"go.uber.org/zap"
 )
@@ -26,39 +24,25 @@ func (r *mutationResolver) CreateTeamMember(ctx context.Context, input model.New
 	r.Logger.Info("Successful auth", zap.Any("token", token))
 
 	var teamMember model.TeamMember
-	err = db.DBClient.QueryRow("INSERT INTO team_members (name, role, city) VALUES ($1, $2, $3) RETURNING id, name, role, city",
-		input.Name,
-		input.Role,
-		input.City,
-	).Scan(&teamMember.ID, &teamMember.Name, &teamMember.Role, &teamMember.City)
-
+	teamMember, err = services.CreateTeamMemberService(input)
 	if err != nil {
 		r.Logger.Error("Error creating team member", zap.Error(err))
 		return nil, err
 	}
 
 	r.Logger.Info("Created a new team member", zap.Any("teamMember", teamMember))
-
 	return &teamMember, nil
 }
 
 // UpdateTeamMember is the resolver for the updateTeamMember field.
 func (r *mutationResolver) UpdateTeamMember(ctx context.Context, input model.UpdateTeamMember) (*model.TeamMember, error) {
-	var teamMember model.TeamMember
-	err := db.DBClient.QueryRowx("UPDATE team_members SET name=$2, role=$3, city=$4 WHERE id=$1 RETURNING id, name, role, city",
-		input.ID,
-		input.Name,
-		input.Role,
-		input.City,
-	).StructScan(&teamMember)
-
+	teamMember, err := services.UpdateTeamMemberService(input)
 	if err != nil {
 		r.Logger.Error("Error updating team member", zap.Error(err))
 		return nil, err
 	}
 
 	r.Logger.Info("Updated team member", zap.Any("teamMember", teamMember))
-
 	return &teamMember, nil
 }
 
@@ -73,37 +57,21 @@ func (r *mutationResolver) RemoveTeamMember(ctx context.Context, input model.Del
 	r.Logger.Info("Successful auth", zap.Any("token", token))
 
 	var teamMember model.TeamMember
-	err = db.DBClient.QueryRow("DELETE FROM team_members WHERE id=$1 RETURNING id, name, role, city", input.TeamMemberID).Scan(&teamMember.ID, &teamMember.Name, &teamMember.Role, &teamMember.City)
+	teamMember, err = services.RemoveTeamMemberService(input.TeamMemberID)
 	if err != nil {
 		r.Logger.Error("Error deleting team member", zap.Error(err))
 		return nil, err
 	}
 
 	r.Logger.Info("Deleted team member", zap.Any("teamMember", teamMember))
-
 	return &teamMember, nil
 }
 
 
 // TeamMembers is the resolver for the teamMembers field.
 func (r *queryResolver) TeamMembers(ctx context.Context) ([]*model.TeamMember, error) {
-	teamMembers := make([]*model.TeamMember, 0)
-	rows, err := db.DBClient.Query("SELECT id, name, role, city FROM team_members")
+	teamMembers, err := services.GetTeamMembersService()
 	if err != nil {
-		r.Logger.Error("Failed to get team members", zap.Error(err))
-		return nil, err
-	}
-	defer rows.Close()
-
-	for rows.Next() {
-		var teamMember model.TeamMember
-		if err := rows.Scan(&teamMember.ID, &teamMember.Name, &teamMember.Role, &teamMember.City); err != nil {
-			r.Logger.Error("Failed to scan row", zap.Error(err))
-			return nil, err
-		}
-		teamMembers = append(teamMembers, &teamMember)
-	}
-	if err := rows.Err(); err != nil {
 		r.Logger.Error("Failed to get row error", zap.Error(err))
 		return nil, err
 	}
@@ -114,21 +82,14 @@ func (r *queryResolver) TeamMembers(ctx context.Context) ([]*model.TeamMember, e
 
 // TeamMember is the resolver for the teamMember field.
 func (r *queryResolver) TeamMember(ctx context.Context, id string) (*model.TeamMember, error) {
-	var teamMember model.TeamMember
-
-	err := db.DBClient.QueryRow("SELECT id, name, role, city FROM team_members WHERE id = $1", id).Scan(&teamMember.ID, &teamMember.Name, &teamMember.Role, &teamMember.City)
-
+	teamMember, err := services.GetTeamMemberService(id)
 	if err != nil {
-		if err == sql.ErrNoRows {
-			r.Logger.Error("Team member not found", zap.Error(err))
-			return nil, fmt.Errorf("team member not found")
-		}
 		r.Logger.Error("Failed to get team member", zap.Error(err))
 		return nil, err
 	}
 
 	r.Logger.Info("found team member with the given id")
-	return &teamMember, nil
+	return teamMember, nil
 }
 
 // Mutation returns MutationResolver implementation.
