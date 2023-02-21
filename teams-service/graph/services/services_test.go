@@ -259,7 +259,7 @@ func TestUpdateTeamMemberService(t *testing.T) {
     defer db.Close()
 
     // Define the columns that will be returned by the mock rows
-    columns := []string{"ID", "Name", "Role", "City"}
+    columns := []string{"id", "name", "role", "city"}
 
     // Define the rows that will be returned by the mock database
     rows := sqlmock.NewRows(columns).
@@ -280,9 +280,18 @@ func TestUpdateTeamMemberService(t *testing.T) {
         Role: pointerToString("Updated Role"),
         City: pointerToString("Updated City"),
     }
-    _, err = UpdateTeamMemberService(sqlxDB, requestBody)
-
+    teamMember, err := UpdateTeamMemberService(sqlxDB, requestBody)
     assert.NoError(t, err)
+
+    expectedTeamMember := &model.TeamMember{
+        ID:   "1",
+        Name: "Updated Name",
+        Role: "Updated Role",
+        City: "Updated City",
+    }
+
+    // Verify that the correct data was returned
+    assert.Equal(t, expectedTeamMember, &teamMember)
 
     // Verify that all expected queries were made
     assert.NoError(t, mock.ExpectationsWereMet())
