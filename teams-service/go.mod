@@ -5,6 +5,7 @@ go 1.19
 require (
 	github.com/99designs/gqlgen v0.17.24
 	github.com/gin-gonic/gin v1.8.2
+	github.com/golang/mock v1.6.0
 	github.com/jmoiron/sqlx v1.3.5
 	github.com/lib/pq v1.10.7
 	github.com/spf13/viper v1.15.0
@@ -21,7 +22,6 @@ require (
 	github.com/go-playground/universal-translator v0.18.0 // indirect
 	github.com/go-playground/validator/v10 v10.11.1 // indirect
 	github.com/goccy/go-json v0.9.11 // indirect
-	github.com/golang/mock v1.6.0 // indirect
 	github.com/gorilla/websocket v1.5.0 // indirect
 	github.com/hashicorp/golang-lru v0.5.4 // indirect
 	github.com/hashicorp/hcl v1.0.0 // indirect
