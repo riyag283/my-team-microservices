@@ -6,6 +6,7 @@ package graph
 
 import (
 	"context"
+	db "teams/db"
 	"teams/graph/helpers"
 	"teams/graph/model"
 	"teams/graph/services"
@@ -24,7 +25,7 @@ func (r *mutationResolver) CreateTeamMember(ctx context.Context, input model.New
 	r.Logger.Info("Successful auth", zap.Any("token", token))
 
 	var teamMember model.TeamMember
-	teamMember, err = services.CreateTeamMemberService(input)
+	teamMember, err = services.CreateTeamMemberService(db.DBClientInstance, input)
 	if err != nil {
 		r.Logger.Error("Error creating team member", zap.Error(err))
 		return nil, err
@@ -36,7 +37,7 @@ func (r *mutationResolver) CreateTeamMember(ctx context.Context, input model.New
 
 // UpdateTeamMember is the resolver for the updateTeamMember field.
 func (r *mutationResolver) UpdateTeamMember(ctx context.Context, input model.UpdateTeamMember) (*model.TeamMember, error) {
-	teamMember, err := services.UpdateTeamMemberService(input)
+	teamMember, err := services.UpdateTeamMemberService(db.DBClientInstance, input)
 	if err != nil {
 		r.Logger.Error("Error updating team member", zap.Error(err))
 		return nil, err
@@ -57,7 +58,7 @@ func (r *mutationResolver) RemoveTeamMember(ctx context.Context, input model.Del
 	r.Logger.Info("Successful auth", zap.Any("token", token))
 
 	var teamMember model.TeamMember
-	teamMember, err = services.RemoveTeamMemberService(input.TeamMemberID)
+	teamMember, err = services.RemoveTeamMemberService(db.DBClientInstance, input.TeamMemberID)
 	if err != nil {
 		r.Logger.Error("Error deleting team member", zap.Error(err))
 		return nil, err
@@ -70,7 +71,7 @@ func (r *mutationResolver) RemoveTeamMember(ctx context.Context, input model.Del
 
 // TeamMembers is the resolver for the teamMembers field.
 func (r *queryResolver) TeamMembers(ctx context.Context) ([]*model.TeamMember, error) {
-	teamMembers, err := services.GetTeamMembersService()
+	teamMembers, err := services.GetTeamMembersService(db.DBClientInstance)
 	if err != nil {
 		r.Logger.Error("Failed to get row error", zap.Error(err))
 		return nil, err
@@ -82,7 +83,7 @@ func (r *queryResolver) TeamMembers(ctx context.Context) ([]*model.TeamMember, e
 
 // TeamMember is the resolver for the teamMember field.
 func (r *queryResolver) TeamMember(ctx context.Context, id string) (*model.TeamMember, error) {
-	teamMember, err := services.GetTeamMemberService(id)
+	teamMember, err := services.GetTeamMemberService(db.DBClientInstance, id)
 	if err != nil {
 		r.Logger.Error("Failed to get team member", zap.Error(err))
 		return nil, err
